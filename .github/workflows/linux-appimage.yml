@@ -1,0 +1,55 @@
+# This fork only: builds the Linux AppImage of each new upstream NX2navi release, with the fork's Linux branches
+# applied, and publishes it as a pre-release (.github/scripts/build-linux-appimage.sh). A conflict opens an issue.
+name: Linux AppImage
+
+on:
+  schedule:
+    - cron: '17 5 * * *'   # daily: a new upstream release is picked up within a day
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Upstream tag to build (latest: the newest release)'
+        default: latest
+      force:
+        description: 'Build again even if the release exists (replaces its files)'
+        type: boolean
+        default: false
+      publish:
+        description: 'Publish the release (off: build only, the AppImage stays an artifact of the run)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write   # the appimage-<version> branch, the tag and the release
+  issues: write     # an issue when a branch does not apply
+
+concurrency:
+  group: linux-appimage
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.repository == 'loteran/NX2navi'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: astral-sh/setup-uv@v6
+      - name: Build and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # inputs are empty on the schedule: latest, no force, publish
+        run: >-
+          bash .github/scripts/build-linux-appimage.sh "${{ inputs.tag || 'latest' }}" "${{ inputs.force || 'false' }}"
+          "${{ github.event_name == 'workflow_dispatch' && !inputs.publish && 'false' || 'true' }}"
+      - name: Keep the AppImage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NX2navi-Linux-AppImage
+          path: ${{ runner.temp }}/nx2navi-appimage/dist/
+          if-no-files-found: ignore
+          retention-days: 14
