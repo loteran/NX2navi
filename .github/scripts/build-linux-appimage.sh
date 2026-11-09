@@ -14,8 +14,9 @@ UPSTREAM=tangerineturtle1/NX2navi
 FORK="${GITHUB_REPOSITORY:-loteran/NX2navi}"
 # Branches of this fork whose own commits (those not in upstream main) are cherry-picked onto the upstream tag, in
 # order. Upstream 0.6.0 took the Linux build, the shader fixes and button prompts in; what is left is the release
-# workflow and make_appimage.py --prompt-art (upstream PR #273). A commit the tag already has is skipped.
-BRANCHES=(appimage-release)
+# workflow and make_appimage.py --prompt-art (upstream PR #273), and the DLSS download on NVIDIA systems
+# (appimage-dlss). A commit the tag already has is skipped.
+BRANCHES=(appimage-release appimage-dlss)
 WORK="${RUNNER_TEMP:-/tmp}/nx2navi-appimage"
 
 want="${1:-latest}"
