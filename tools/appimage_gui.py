@@ -18,6 +18,7 @@ import argparse
 import base64
 import io
 import json
+import locale
 import os
 import queue
 import shutil
@@ -50,6 +51,22 @@ TEXT = {
         'nodump': 'Choose your .nup dump first.', 'busy': 'A build is running: Cancel it first, or press close again.',
         'missing': 'Packages are missing. Install them (see Details), then press the button again.',
     },
+    'fr': {
+        'title': 'Ocarina of Time pour Linux',
+        'intro': 'Construit le jeu en natif sur ce PC à partir de votre dump (Switch 2, jeu 1.1.1). Aucun fichier du jeu n\'est inclus.',
+        'dump': 'Dump du jeu', 'folder': 'Dossier du jeu', 'browse': 'Parcourir…', 'none': 'pas encore choisi',
+        'install': 'Installer', 'update': 'Mettre à jour', 'play': 'Jouer', 'cancel': 'Annuler',
+        'confirm': 'Arrêter le build ?', 'details': 'Détails', 'shortcut': 'Ajouter au menu des applications',
+        'deps': 'Vérifier les paquets', 'check': 'Vérifier le dump', 'exefs': 'Extraire les fichiers du programme',
+        'romfs': 'Construire l\'image RomFS', 'lift': 'Convertir le code en C', 'compile': 'Compiler le jeu',
+        'shaders': 'Préparer les shaders', 'prompts': 'Dessiner les icônes de boutons', 'dlss': 'NVIDIA DLSS',
+        'running': 'en cours', 'done': 'fait', 'skip': 'conservé', 'failed': 'échec', 'na': '—',
+        'ready': 'Fermez les gros programmes pendant le build : il utilise beaucoup de mémoire.',
+        'finished': 'Terminé. Appuyez sur Jouer.', 'stopped': 'Arrêté :',
+        'cancelled': 'Annulé. Relancez-le pour continuer.', 'nodump': 'Choisissez d\'abord votre dump .nup.',
+        'busy': 'Un build est en cours : annulez-le d\'abord, ou fermez encore une fois.',
+        'missing': 'Des paquets manquent. Installez-les (voir Détails), puis appuyez de nouveau sur le bouton.',
+    },
 }
 
 COLORS = {'bg': '#1f2329', 'panel': '#2a2f37', 'text': '#e8e6e3', 'dim': '#9aa0a8', 'accent': '#5fb3f0',
@@ -57,7 +74,14 @@ COLORS = {'bg': '#1f2329', 'panel': '#2a2f37', 'text': '#e8e6e3', 'dim': '#9aa0a
           'primary': '#2f7fc1', 'primary_hi': '#3b90d6', 'track': '#3a3f47'}
 
 
-T = TEXT['en']
+def lang():
+    code = (os.environ.get('LANGUAGE') or os.environ.get('LC_ALL') or
+            os.environ.get('LC_MESSAGES') or os.environ.get('LANG') or
+            (locale.getlocale()[0] or ''))
+    return 'fr' if code.lower().startswith('fr') else 'en'
+
+
+T = TEXT[lang()]
 
 
 def load_config():
