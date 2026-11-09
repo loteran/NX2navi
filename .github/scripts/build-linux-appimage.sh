@@ -12,8 +12,10 @@ set -euo pipefail
 
 UPSTREAM=tangerineturtle1/NX2navi
 FORK="${GITHUB_REPOSITORY:-loteran/NX2navi}"
-# The branches applied on top of the upstream tag, in order. A branch already contained in the tag is skipped.
-BRANCHES=(linux-make-game playstation-prompts xlate-sm86-fixes)
+# Branches of this fork whose own commits (those not in upstream main) are cherry-picked onto the upstream tag, in
+# order. Upstream 0.6.0 took the Linux build, the shader fixes and button prompts in; what is left is the release
+# workflow and make_appimage.py --prompt-art (upstream PR #273). A commit the tag already has is skipped.
+BRANCHES=(appimage-release)
 WORK="${RUNNER_TEMP:-/tmp}/nx2navi-appimage"
 
 want="${1:-latest}"
@@ -27,6 +29,11 @@ fi
 version="${tag#v}"
 release="linux-appimage-$version"
 echo "upstream $tag -> $FORK release $release"
+
+if gh release view "$tag" -R "$UPSTREAM" --json assets --jq '.assets[].name' | grep -q 'NX2navi-Linux-.*\.AppImage'; then
+    echo "upstream $tag carries its own AppImage: nothing to publish here"
+    exit 0
+fi
 
 if [ "$publish" = true ] && gh release view "$release" -R "$FORK" >/dev/null 2>&1; then
     if [ "$force" != true ]; then
@@ -67,13 +74,16 @@ git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
 applied=()
 for b in "${BRANCHES[@]}"; do
-    if git merge-base --is-ancestor "fork/$b" HEAD; then
+    # the branch's commits that upstream main lacks, minus those the tag has as an equivalent patch
+    picks=$(git log --reverse --format=%H "origin/main..fork/$b")
+    picks=$(for c in $picks; do git cherry HEAD "$c" "$c^" | awk '$1 == "+" {print $2}'; done)
+    if [ -z "$picks" ]; then
         echo "$b: already in $tag"
         continue
     fi
-    if ! git merge -q --no-edit "fork/$b"; then
+    if ! git cherry-pick -x $picks >/dev/null; then
         files=$(git diff --name-only --diff-filter=U)
-        git merge --abort
+        git cherry-pick --abort
         [ "$publish" = true ] && conflict_issue "$b" "$files"
         echo "::error::$b conflicts with $tag: $files"
         exit 1
@@ -90,12 +100,21 @@ uv pip install -q --python .venv/bin/python pillow
 uv python install -q 3.14
 python314=$(find "$(uv python dir)" -maxdepth 1 -type d -name 'cpython-3.14.*-linux-x86_64-gnu' | sort -V | tail -1)
 [ -x "$python314/bin/python3" ] || { echo "::error::no relocatable CPython 3.14 from uv"; exit 1; }
+# the button art make_game.py's prompts step draws from: the release's own app zip carries it
+art=()
+if gh release download "$tag" -R "$UPSTREAM" -p 'NX2navi-app-*.zip' -D "$WORK/app" 2>/dev/null &&
+   unzip -q "$WORK"/app/NX2navi-app-*.zip 'prompt-art/*' -d "$WORK/app" 2>/dev/null; then
+    art=(--prompt-art "$WORK/app/prompt-art")
+else
+    echo "::warning::no prompt-art in upstream $tag's app zip: builds keep the Switch prompts"
+fi
 curl -fsSL -o "$WORK/appimagetool" \
     https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
 chmod +x "$WORK/appimagetool"
 export APPIMAGE_EXTRACT_AND_RUN=1   # no FUSE on the runner
 
-.venv/bin/python tools/make_appimage.py --python "$python314" --appimagetool "$WORK/appimagetool" --out "$WORK/dist"
+.venv/bin/python tools/make_appimage.py --python "$python314" --appimagetool "$WORK/appimagetool" --out "$WORK/dist" \
+    "${art[@]+"${art[@]}"}"
 appimage="$WORK/dist/NX2navi-Linux-$version-x86_64.AppImage"
 "$appimage" --help | head -3   # the AppImage starts
 (cd "$WORK/dist" && sha256sum "$(basename "$appimage")" > SHA256SUMS && cat SHA256SUMS)

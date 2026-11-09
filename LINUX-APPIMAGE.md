@@ -9,23 +9,24 @@ install the packages, build and play.
 
 ## What it adds to upstream
 
+Upstream 0.6.0 took this fork's work in: the Linux build and `tools/make_appimage.py`, every shader translated, and
+button prompts. What is left is publishing the AppImage itself, which upstream releases do not do yet:
+
 | Branch | What | Upstream pull request |
 |---|---|---|
-| `linux-make-game` | the Linux build (`tools/make_game.py`, the AppImage packer, the #72 runtime fix) | [#108](https://github.com/tangerineturtle1/NX2navi/pull/108) |
-| `playstation-prompts` | PlayStation and Steam Deck button prompts | [#107](https://github.com/tangerineturtle1/NX2navi/pull/107) |
-| `xlate-sm86-fixes` | every shader translated (20 failures to 0) | [#106](https://github.com/tangerineturtle1/NX2navi/pull/106) |
+| `appimage-release` | a workflow that attaches the AppImage to each release, and the button art in the AppImage | [#273](https://github.com/tangerineturtle1/NX2navi/pull/273) |
 
-Once upstream merges them, the AppImage is simply upstream's kit.
+Once upstream merges it, its own releases carry the AppImage and this fork stops publishing one.
 
 ## How it is kept up to date
 
 `.github/workflows/linux-appimage.yml` runs every day. When upstream has a release this fork has no
-`linux-appimage-<version>` release for, it checks out the upstream tag, merges the three branches, builds the shader
+`linux-appimage-<version>` release for, it checks out the upstream tag, applies the branch above, takes the button art from the release's app zip, builds the shader
 translator and the AppImage, and publishes it as a **pre-release** (it is built without the game, so nothing runs the
 game until someone tries it). The source it was built from is the `appimage-<version>` branch and the
 `linux-appimage-<version>` tag.
 
-If a branch no longer applies on the new release, the workflow stops and opens an issue here: rebase that branch on the
+If the branch no longer applies on the new release, the workflow stops and opens an issue here: rebase it on the
 upstream tag, push it, and run the workflow again from the Actions tab (*Run workflow*, *force* to rebuild).
 
 The `main` branch stays a copy of upstream; this branch (`linux-appimage`) is the fork's default branch only so that
