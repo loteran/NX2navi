@@ -15,8 +15,8 @@ FORK="${GITHUB_REPOSITORY:-loteran/NX2navi}"
 # Branches of this fork whose own commits (those not in upstream main) are cherry-picked onto the upstream tag, in
 # order. Upstream 0.6.0 took the Linux build, the shader fixes and button prompts in; what is left is the release
 # workflow and make_appimage.py --prompt-art (upstream PR #273), and the DLSS download on NVIDIA systems
-# (appimage-dlss). A commit the tag already has is skipped.
-BRANCHES=(appimage-release appimage-dlss)
+# (appimage-dlss), and the window (appimage-gui). A commit the tag already has is skipped.
+BRANCHES=(appimage-release appimage-dlss appimage-gui)
 WORK="${RUNNER_TEMP:-/tmp}/nx2navi-appimage"
 
 want="${1:-latest}"
@@ -152,7 +152,7 @@ $list
    ./NX2navi-Linux-$version-x86_64.AppImage "/path/to/your game.nup"
    \`\`\`
    It builds into \`~/Games/Ocarina\` (add a folder after the dump to choose another). If it stops, run the same command again: finished steps are skipped.
-3. Play: \`~/Games/Ocarina/play.sh\`. **F1** opens the settings (Controls → Button prompts: Nintendo, PlayStation, Steam Deck).
+3. Play: \`~/Games/Ocarina/play.sh\`, or double-click the AppImage: a window installs, updates and plays. **F1** opens the settings (Controls → Button prompts: Nintendo, PlayStation, Steam Deck).
 
 The first run installs \`zbic\` (GPL-2.0) with pip, so it needs the internet once. Requirements: x86-64 Linux 6.7+, 16 GB of RAM, about 30 GB free, a Vulkan 1.3 GPU with \`VK_EXT_external_memory_host\` and \`VK_EXT_mesh_shader\`.
 

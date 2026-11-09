@@ -15,7 +15,8 @@ button prompts. What is left is publishing the AppImage itself, which upstream r
 | Branch | What | Upstream pull request |
 |---|---|---|
 | `appimage-release` | a workflow that attaches the AppImage to each release, and the button art in the AppImage | [#273](https://github.com/tangerineturtle1/NX2navi/pull/273) |
-| `appimage-dlss` | on NVIDIA systems, the AppImage downloads NVIDIA's DLSS for Linux beside the game (DLSS upscaling) | not yet |
+| `appimage-dlss` | on NVIDIA systems, the AppImage downloads NVIDIA's DLSS for Linux beside the game (DLSS upscaling) | [#290](https://github.com/tangerineturtle1/NX2navi/pull/290) |
+| `appimage-gui` | a window: double-click the AppImage to install, update and play | [#291](https://github.com/tangerineturtle1/NX2navi/pull/291) |
 
 Once upstream merges it, its own releases carry the AppImage and this fork stops publishing one.
 
