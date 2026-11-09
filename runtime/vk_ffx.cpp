@@ -1,4 +1,5 @@
-// AMD FidelityFX through its API library (amd_fidelityfx_vk.dll next to the executable, loaded at run time): FSR 3.1
+// AMD FidelityFX through its API library (amd_fidelityfx_vk.dll next to the executable on Windows, libamd_fidelityfx_vk.so
+// next to it on Linux, where AMD ships none and the Linux AppImage builds it from AMD's SDK; loaded at run time): FSR 3.1
 // temporal upscaling here, in the place of DLSS in vk_dlaa.c, and frame generation (vk_ffx_fg_*, below). The API's
 // headers are in third_party/ffx_api (MIT); they are C++ in places, hence this file. Nothing of it runs unless the
 // upscaler or frame generation asks for FSR 3.1.
@@ -22,6 +23,7 @@
 extern "C" {
 #include "cfg.h"
 #include "host.h"
+#include "platform/platform.h"
 #include "vk.h"
 #include "vk_ffx.h"
 }
@@ -121,9 +123,32 @@ extern "C" int vk_ffx_load(void) {
     A.configure = (PfnFfxConfigure)(void *)GetProcAddress(m, "ffxConfigure");
     A.query = (PfnFfxQuery)(void *)GetProcAddress(m, "ffxQuery");
     A.dispatch = (PfnFfxDispatch)(void *)GetProcAddress(m, "ffxDispatch");
+    const char *name = "amd_fidelityfx_vk.dll";
+#else
+    // The same five entry points, from libamd_fidelityfx_vk.so beside the game: its FSR 3.1 upscaler only, so the
+    // frame generation below finds no provider and stays off.
+    const char *name = "libamd_fidelityfx_vk.so";
+    char path[4096];
+    char *cut = plat_exe_path(path, sizeof path - 32) ? plat_last_sep(path) : NULL;
+    if (!cut) {
+        rt_log("ffx: no executable path: FSR 3.1 off");
+        return 0;
+    }
+    snprintf(cut + 1, 32, "%s", name);
+    void *m = plat_lib_open(path);
+    if (!m) {
+        rt_log("ffx: %s not found: FSR 3.1 off", path);
+        return 0;
+    }
+    A.lib = m;
+    A.create = (PfnFfxCreateContext)plat_lib_sym(m, "ffxCreateContext");
+    A.destroy = (PfnFfxDestroyContext)plat_lib_sym(m, "ffxDestroyContext");
+    A.configure = (PfnFfxConfigure)plat_lib_sym(m, "ffxConfigure");
+    A.query = (PfnFfxQuery)plat_lib_sym(m, "ffxQuery");
+    A.dispatch = (PfnFfxDispatch)plat_lib_sym(m, "ffxDispatch");
 #endif
     A.ok = A.create && A.destroy && A.configure && A.query && A.dispatch;
-    rt_log("ffx: amd_fidelityfx_vk.dll %s", A.ok ? "loaded" : "lacks the API entry points: FSR 3.1 off");
+    rt_log("ffx: %s %s", name, A.ok ? "loaded" : "lacks the API entry points: FSR 3.1 off");
     return A.ok;
 }
 
