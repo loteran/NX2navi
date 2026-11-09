@@ -1,6 +1,6 @@
 #!/bin/bash
 # Builds the Linux AppImage of an upstream NX2navi release with this fork's Linux branches applied, and publishes it
-# as a pre-release of this fork. Run by .github/workflows/linux-appimage.yml; needs GH_TOKEN, git, uv and the .NET SDK.
+# as a release of this fork (GitHub marks the newest version Latest). Run by .github/workflows/linux-appimage.yml; needs GH_TOKEN, git, uv and the .NET SDK.
 #
 #   build-linux-appimage.sh <upstream tag or "latest"> <force: true|false> [publish: true|false]
 #
@@ -137,7 +137,7 @@ for a in "${applied[@]+"${applied[@]}"}"; do list+="- \`${a%% *}\` (${a##* })"$'
 notes=$(cat <<EOF
 An unofficial Linux build kit for **NX2navi $version**, built automatically from upstream [\`$tag\`](https://github.com/$UPSTREAM/releases/tag/$tag): it builds *The Legend of Zelda: Ocarina of Time* (Nintendo Switch 2, game 1.1.1) as a native Linux program **on your PC, from your own dump**. **No game files are included.**
 
-This is a **pre-release** until it has been tried with the game. Branches of this fork applied on top of \`$tag\`:
+Branches of this fork applied on top of \`$tag\`:
 $list
 ## Use
 
@@ -165,7 +165,7 @@ if gh release view "$release" -R "$FORK" >/dev/null 2>&1; then
     gh release upload "$release" -R "$FORK" --clobber "$appimage" "$WORK/dist/SHA256SUMS"
     gh release edit "$release" -R "$FORK" --notes "$notes"
 else
-    gh release create "$release" -R "$FORK" --prerelease --verify-tag \
+    gh release create "$release" -R "$FORK" --verify-tag \
         --title "NX2navi $version – Linux AppImage (unofficial, automatic)" --notes "$notes" \
         "$appimage" "$WORK/dist/SHA256SUMS"
 fi

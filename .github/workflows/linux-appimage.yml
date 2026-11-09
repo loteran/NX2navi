@@ -1,5 +1,5 @@
 # This fork only: builds the Linux AppImage of each new upstream NX2navi release, with the fork's Linux branches
-# applied, and publishes it as a pre-release (.github/scripts/build-linux-appimage.sh). A conflict opens an issue.
+# applied, and publishes it as a release (.github/scripts/build-linux-appimage.sh). A conflict opens an issue.
 name: Linux AppImage
 
 on:
