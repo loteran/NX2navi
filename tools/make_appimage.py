@@ -95,8 +95,39 @@ esac
 NUP="$1"
 OUT="${2:-$HOME/Games/Ocarina}"
 [ -f "$NUP" ] || { echo "error: $NUP is not a file" >&2; usage; exit 1; }
+# NVIDIA's DLSS for Linux, the game's DLSS upscaling (runtime/resolution.c finds libnvidia-ngx-dlss.so.<version> beside
+# the game): downloaded from NVIDIA's DLSS SDK repository on NVIDIA systems only, the version and checksum
+# tools/dlss_pin.py pins for Windows, unmodified, with the notice it writes. NX2NAVI_NO_DLSS=1 skips it.
+DLSS_VERSION=310.9.1
+DLSS_SO="libnvidia-ngx-dlss.so.$DLSS_VERSION"
+DLSS_SHA256=7561f16cab74e2b7ccf791bf44bb9cc43abb44bcf78f33c5663520ad4e857e02
+get_dlss() {
+    [ -e /proc/driver/nvidia/version ] && [ -z "${NX2NAVI_NO_DLSS:-}" ] || return 0
+    [ -f "$OUT/$DLSS_SO" ] && echo "$DLSS_SHA256  $OUT/$DLSS_SO" | sha256sum -c --status && return 0
+    echo "Downloading NVIDIA DLSS $DLSS_VERSION for Linux (NVIDIA RTX SDKs License) ..."
+    local tmp="$OUT/$DLSS_SO.part"
+    if curl -fsSL -o "$tmp" "https://raw.githubusercontent.com/NVIDIA/DLSS/v$DLSS_VERSION/lib/Linux_x86_64/rel/$DLSS_SO" &&
+       echo "$DLSS_SHA256  $tmp" | sha256sum -c --status; then
+        mv -f "$tmp" "$OUT/$DLSS_SO"
+        cat > "$OUT/libnvidia-ngx-dlss-NOTICE.txt" <<EON
+$DLSS_SO is NVIDIA DLSS $DLSS_VERSION, unmodified, published in NVIDIA's DLSS SDK
+(https://github.com/NVIDIA/DLSS, tag v$DLSS_VERSION). Copyright NVIDIA Corporation.
+
+It is not part of NX2navi and NX2navi's licence does not cover it. It is distributed under the
+NVIDIA RTX SDKs License, and its use is subject to that licence: https://github.com/NVIDIA/DLSS/blob/v$DLSS_VERSION/LICENSE.txt
+NVIDIA licenses DLSS only for use on systems with NVIDIA GPUs.
+
+sha256 $DLSS_SHA256
+EON
+    else
+        rm -f "$tmp"
+        echo "warning: DLSS could not be downloaded or did not match its checksum; the game runs without it" >&2
+    fi
+}
+
 echo "Building into $OUT with $jobs compiles at a time (${mem_gb} GB of RAM); this takes 10 to 25 minutes."
 run_make_game --nup "$NUP" --out "$OUT" --jobs "$jobs" || exit $?
+get_dlss
 
 # play.sh: the environment the game wants on this machine, then the game
 {
