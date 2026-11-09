@@ -25,7 +25,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 KIT_DIRS = ('recomp', 'runtime')
 KIT_FILES = ('VERSION', 'LICENSE', 'LICENSE-ADDITIONS', 'THIRD_PARTY_NOTICES.md', 'nx2navi.ini.example')
-TOOLS_SKIP = ('vendor', 'xlate', '__pycache__')   # the translator ships built (bin/); its sources stay out
+TOOLS_SKIP = ('vendor', 'xlate', 'ffx_linux', '__pycache__')   # the translator ships built (bin/); its sources stay out
 PACKAGES = ('numpy==2.5.4', 'lz4==4.4.5', 'zstandard==0.25.0', 'fonttools==4.68.0', 'pillow==12.3.0')
 
 APPRUN = r'''#!/bin/bash
@@ -142,6 +142,10 @@ EON
 
 echo "Building into $OUT with $jobs compiles at a time (${mem_gb} GB of RAM); this takes 10 to 25 minutes."
 run_make_game --nup "$NUP" --out "$OUT" --jobs "$jobs" "${EVENTS[@]+"${EVENTS[@]}"}" || exit $?
+# AMD FSR 3.1 for Linux (tools/ffx_linux, built with the AppImage): runtime/vk_ffx.cpp loads it from beside the game
+for f in libamd_fidelityfx_vk.so libamd_fidelityfx_vk-LICENSE.txt; do
+    [ -f "$KIT/ffx/$f" ] && cp -f "$KIT/ffx/$f" "$OUT/$f"
+done
 if [ -e /proc/driver/nvidia/version ] && [ -z "${NX2NAVI_NO_DLSS:-}" ]; then
     ev step dlss '"state":"start"'; get_dlss; ev step dlss '"state":"done"'
 else
@@ -184,6 +188,9 @@ def main():
                     help='a relocatable CPython 3.14 folder (python-build-standalone, ~/.local/share/uv/python/cpython-3.14*)')
     ap.add_argument('--appimagetool', type=Path, required=True, help='appimagetool-x86_64.AppImage')
     ap.add_argument('--out', type=Path, default=ROOT / 'dist', help='where the AppImage goes (default dist/)')
+    ap.add_argument('--ffx', type=Path, metavar='FOLDER',
+                    help='the folder tools/ffx_linux/build.sh wrote libamd_fidelityfx_vk.so and its licence into: FSR 3.1 '
+                         'on Linux; without it the game has no FSR 3.1')
     ap.add_argument('--prompt-art', type=Path, nargs='+', metavar='FOLDER',
                     help='folders holding XGamepad, P5Gamepad and Keyboard_Mouse (or those folders): the button art, as '
                          'make_kit.py --prompt-art takes it (a release zip\'s prompt-art folder does too)')
@@ -212,6 +219,11 @@ def main():
         shutil.copy2(xlate / f, kit / 'bin' / f)
     (kit / 'toolchain' / 'vma').mkdir(parents=True)
     shutil.copy2(ROOT / 'toolchain' / 'vma' / 'vk_mem_alloc.h', kit / 'toolchain' / 'vma' / 'vk_mem_alloc.h')
+    if a.ffx:
+        (kit / 'ffx').mkdir()
+        for f in ('libamd_fidelityfx_vk.so', 'libamd_fidelityfx_vk-LICENSE.txt'):
+            shutil.copy2(a.ffx / f, kit / 'ffx' / f)
+        print('FSR 3.1: libamd_fidelityfx_vk.so')
     if a.prompt_art:
         sys.path.insert(0, str(ROOT / 'tools'))
         import prompt_art
