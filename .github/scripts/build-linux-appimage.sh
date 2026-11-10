@@ -117,7 +117,7 @@ export APPIMAGE_EXTRACT_AND_RUN=1   # no FUSE on the runner
 
 # The toolchain the AppImage carries (LLVM, the Steam Runtime sysroot, its libraries), then AMD FSR 3.1 for Linux
 # built with it, so that both need no newer glibc than 2.31
-sudo apt-get install -y -qq glslc spirv-tools glslang-tools meson nasm ninja-build cmake >/dev/null
+sudo apt-get install -y -qq glslc spirv-tools glslang-tools meson nasm ninja-build cmake libvulkan-dev >/dev/null
 .venv/bin/python tools/make_linux_toolchain.py --out "$WORK/linux-toolchain"
 NX2NAVI_LINUX_TOOLCHAIN="$WORK/linux-toolchain" tools/ffx_linux/build.sh "$WORK/ffx" "$WORK/dl"
 .venv/bin/python tools/make_appimage.py --python "$python314" --appimagetool "$WORK/appimagetool" --out "$WORK/dist" \
