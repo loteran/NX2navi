@@ -13,10 +13,10 @@ set -euo pipefail
 UPSTREAM=tangerineturtle1/NX2navi
 FORK="${GITHUB_REPOSITORY:-loteran/NX2navi}"
 # Branches of this fork whose own commits (those not in upstream main) are cherry-picked onto the upstream tag, in
-# order. Upstream 0.6.0 took the Linux build, the shader fixes and button prompts in; what is left is the release
-# workflow and make_appimage.py --prompt-art (upstream PR #273), and the DLSS download on NVIDIA systems
-# (appimage-dlss), and the window (appimage-gui). A commit the tag already has is skipped.
-BRANCHES=(appimage-release appimage-dlss appimage-gui)
+# order. Upstream 0.7.0 took the release workflow, the DLSS download and the window in; what is left is
+# appimage-linux: AMD FSR 3.1 upscaling and frame generation on Linux (tools/ffx_linux) and the toolchain the AppImage
+# carries (tools/make_linux_toolchain.py), so nothing has to be installed. A commit the tag already has is skipped.
+BRANCHES=(appimage-linux)
 WORK="${RUNNER_TEMP:-/tmp}/nx2navi-appimage"
 
 want="${1:-latest}"
@@ -31,10 +31,8 @@ version="${tag#v}"
 release="linux-appimage-$version"
 echo "upstream $tag -> $FORK release $release"
 
-if gh release view "$tag" -R "$UPSTREAM" --json assets --jq '.assets[].name' | grep -q 'NX2navi-Linux-.*\.AppImage'; then
-    echo "upstream $tag carries its own AppImage: nothing to publish here"
-    exit 0
-fi
+# Upstream releases carry an AppImage of their own since 0.7.0; this fork's adds what appimage-linux holds, and stops
+# once upstream has all of it (below).
 
 if [ "$publish" = true ] && gh release view "$release" -R "$FORK" >/dev/null 2>&1; then
     if [ "$force" != true ]; then
@@ -91,7 +89,10 @@ for b in "${BRANCHES[@]}"; do
     fi
     applied+=("$b $(git rev-parse --short "fork/$b")")
 done
-[ ${#applied[@]} -eq 0 ] && echo "every branch is upstream already: the AppImage is upstream's kit as it is"
+if [ ${#applied[@]} -eq 0 ]; then
+    echo "every branch is upstream already: upstream's own AppImage is the same, nothing to publish here"
+    exit 0
+fi
 
 # The shader translator (NativeAOT, .NET 10), the pinned VMA header, a relocatable CPython 3.14, appimagetool.
 uv venv -q --python 3.12 .venv
@@ -114,8 +115,13 @@ curl -fsSL -o "$WORK/appimagetool" \
 chmod +x "$WORK/appimagetool"
 export APPIMAGE_EXTRACT_AND_RUN=1   # no FUSE on the runner
 
+# The toolchain the AppImage carries (LLVM, the Steam Runtime sysroot, its libraries), then AMD FSR 3.1 for Linux
+# built with it, so that both need no newer glibc than 2.31
+sudo apt-get install -y -qq glslc spirv-tools glslang-tools meson nasm ninja-build cmake >/dev/null
+.venv/bin/python tools/make_linux_toolchain.py --out "$WORK/linux-toolchain"
+NX2NAVI_LINUX_TOOLCHAIN="$WORK/linux-toolchain" tools/ffx_linux/build.sh "$WORK/ffx" "$WORK/dl"
 .venv/bin/python tools/make_appimage.py --python "$python314" --appimagetool "$WORK/appimagetool" --out "$WORK/dist" \
-    "${art[@]+"${art[@]}"}"
+    "${art[@]+"${art[@]}"}" --ffx "$WORK/ffx" --linux-toolchain "$WORK/linux-toolchain"
 appimage="$WORK/dist/NX2navi-Linux-$version-x86_64.AppImage"
 "$appimage" --help | head -3   # the AppImage starts
 (cd "$WORK/dist" && sha256sum "$(basename "$appimage")" > SHA256SUMS && cat SHA256SUMS)
@@ -139,20 +145,20 @@ An unofficial Linux build kit for **NX2navi $version**, built automatically from
 
 Branches of this fork applied on top of \`$tag\`:
 $list
+What this AppImage adds to upstream's own (\`NX2navi-Linux-$version-x86_64.AppImage\` on [upstream's release](https://github.com/$UPSTREAM/releases/tag/$tag)):
+
+- **AMD FSR 3.1 upscaling and frame generation on Linux**, on every GPU: Screen tab → *Upscaling* AMD FSR 3.1, then *Frame generation* AMD FSR 3.1.
+- **Nothing to install**: the AppImage carries its compiler (LLVM 23) and libraries (Steam Runtime 3), so it builds on SteamOS, Linux Mint and any distribution with glibc 2.31 or later, without packages or developer mode.
+
 ## Use
 
-1. Install the compiler and libraries. On Arch, CachyOS or Manjaro:
-   \`\`\`sh
-   sudo pacman -S --needed clang lld sdl3 opus libvpx dav1d zstd libunwind vulkan-headers vulkan-icd-loader
-   \`\`\`
-   The AppImage names the packages for Fedora and Debian/Ubuntu if one is missing (those two lists are untested).
-2. Make the AppImage executable and give it your \`.nup\` dump:
+1. Make the AppImage executable and start it (double-click, or from a terminal):
    \`\`\`sh
    chmod +x NX2navi-Linux-$version-x86_64.AppImage
-   ./NX2navi-Linux-$version-x86_64.AppImage "/path/to/your game.nup"
+   ./NX2navi-Linux-$version-x86_64.AppImage
    \`\`\`
-   It builds into \`~/Games/Ocarina\` (add a folder after the dump to choose another). If it stops, run the same command again: finished steps are skipped.
-3. Play: \`~/Games/Ocarina/play.sh\`, or double-click the AppImage: a window installs, updates and plays. **F1** opens the settings (Controls → Button prompts: Nintendo, PlayStation, Steam Deck).
+   A window asks for your \`.nup\` dump and the game folder, builds the game (10 to 25 minutes, once) and plays it; later versions update it. From a terminal: \`./NX2navi-Linux-$version-x86_64.AppImage "/path/to/your game.nup" [game folder]\` (default \`~/Games/Ocarina\`). If it stops, run it again: finished steps are skipped.
+2. Play: from the window, or \`~/Games/Ocarina/play.sh\`. **F1** opens the settings.
 
 The first run installs \`zbic\` (GPL-2.0) with pip, so it needs the internet once. Requirements: x86-64 Linux 6.7+, 16 GB of RAM, about 30 GB free, a Vulkan 1.3 GPU with \`VK_EXT_external_memory_host\` and \`VK_EXT_mesh_shader\`.
 

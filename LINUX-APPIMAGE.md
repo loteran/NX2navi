@@ -9,23 +9,22 @@ install the packages, build and play.
 
 ## What it adds to upstream
 
-Upstream 0.6.0 took this fork's work in: the Linux build and `tools/make_appimage.py`, every shader translated, and
-button prompts. What is left is publishing the AppImage itself, which upstream releases do not do yet:
+Upstream 0.7.0 took this fork's AppImage work in: its releases carry an AppImage of their own, which downloads DLSS on
+NVIDIA systems and has a window to install, update and play. This fork's AppImage adds what the `appimage-linux`
+branch holds:
 
-| Branch | What | Upstream pull request |
-|---|---|---|
-| `appimage-release` | a workflow that attaches the AppImage to each release, and the button art in the AppImage | [#273](https://github.com/tangerineturtle1/NX2navi/pull/273) |
-| `appimage-dlss` | on NVIDIA systems, the AppImage downloads NVIDIA's DLSS for Linux beside the game (DLSS upscaling) | [#290](https://github.com/tangerineturtle1/NX2navi/pull/290) |
-| `appimage-gui` | a window: double-click the AppImage to install, update and play | [#291](https://github.com/tangerineturtle1/NX2navi/pull/291) |
+- **AMD FSR 3.1 upscaling and frame generation on Linux**, on every GPU (`tools/ffx_linux`: AMD's FidelityFX library
+  built for Linux, which AMD ships for Windows only);
+- **a toolchain of its own** (`tools/make_linux_toolchain.py`: LLVM, a Steam Runtime 3 sysroot and its libraries), so
+  nothing has to be installed: it builds on SteamOS and on distributions whose clang or Vulkan headers are too old.
 
-Once upstream merges it, its own releases carry the AppImage and this fork stops publishing one.
+Once upstream merges them, this fork stops publishing an AppImage.
 
 ## How it is kept up to date
 
 `.github/workflows/linux-appimage.yml` runs every day. When upstream has a release this fork has no
 `linux-appimage-<version>` release for, it checks out the upstream tag, applies the branch above, takes the button art from the release's app zip, builds the shader
-translator and the AppImage, and publishes it as a **pre-release** (it is built without the game, so nothing runs the
-game until someone tries it). The source it was built from is the `appimage-<version>` branch and the
+translator and the AppImage, and publishes it as a release. The source it was built from is the `appimage-<version>` branch and the
 `linux-appimage-<version>` tag.
 
 If the branch no longer applies on the new release, the workflow stops and opens an issue here: rebase it on the
