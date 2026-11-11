@@ -16,7 +16,9 @@ FORK="${GITHUB_REPOSITORY:-loteran/NX2navi}"
 # order. Upstream 0.7.0 took the release workflow, the DLSS download and the window in; what is left is
 # appimage-linux: AMD FSR 3.1 upscaling and frame generation on Linux (tools/ffx_linux) and the toolchain the AppImage
 # carries (tools/make_linux_toolchain.py), so nothing has to be installed. A commit the tag already has is skipped.
-BRANCHES=(appimage-linux)
+# fsr4-linux (on top of appimage-linux): AMD FSR 4 upscaling on Linux, the library made on the player's PC from AMD's
+# SDK DLL (tools/fsr4_linux.py, the window's "AMD FSR 4" button)
+BRANCHES=(appimage-linux fsr4-linux)
 WORK="${RUNNER_TEMP:-/tmp}/nx2navi-appimage"
 
 want="${1:-latest}"
@@ -148,6 +150,7 @@ $list
 What this AppImage adds to upstream's own (\`NX2navi-Linux-$version-x86_64.AppImage\` on [upstream's release](https://github.com/$UPSTREAM/releases/tag/$tag)):
 
 - **AMD FSR 3.1 upscaling and frame generation on Linux**, on every GPU: Screen tab → *Upscaling* AMD FSR 3.1, then *Frame generation* AMD FSR 3.1.
+- **AMD FSR 4 upscaling on Linux** (optional): the window's *AMD FSR 4* button asks you to agree to AMD's licence, downloads AMD's FSR SDK 2.3.0 from AMD's GitHub release and builds the FSR 4 library on your PC (needs \`git\`, \`gcc\` and \`g++\`, 10 to 20 minutes); then Screen tab → *Upscaling* AMD FSR 4. Nothing of AMD's is in the AppImage. Checked on an RTX 3080 (INT8 network, 3.1 ms from 720p to 1440p); not yet on Radeon cards or SteamOS.
 - **Nothing to install**: the AppImage carries its compiler (LLVM 23) and libraries (Steam Runtime 3), so it builds on SteamOS, Linux Mint and any distribution with glibc 2.31 or later, without packages or developer mode.
 
 ## Use
