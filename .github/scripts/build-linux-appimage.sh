@@ -74,9 +74,12 @@ git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
 applied=()
+earlier=()   # the branches already applied: a branch stacked on one of them shares its commits
 for b in "${BRANCHES[@]}"; do
-    # the branch's commits that upstream main lacks, minus those the tag has as an equivalent patch
-    picks=$(git log --reverse --format=%H "origin/main..fork/$b")
+    # the branch's commits that upstream main and the earlier branches lack, minus those the tag has as an equivalent
+    # patch (git cherry misses a commit whose context changed on the way to HEAD, so stacked commits go by ancestry)
+    picks=$(git log --reverse --format=%H "fork/$b" --not origin/main "${earlier[@]}")
+    earlier+=("fork/$b")
     picks=$(for c in $picks; do git cherry HEAD "$c" "$c^" | awk '$1 == "+" {print $2}'; done)
     if [ -z "$picks" ]; then
         echo "$b: already in $tag"
