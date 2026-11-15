@@ -129,9 +129,12 @@ NX2NAVI_LINUX_TOOLCHAIN="$WORK/linux-toolchain" tools/ffx_linux/build.sh "$WORK/
 .venv/bin/python tools/make_appimage.py --python "$python314" --appimagetool "$WORK/appimagetool" --out "$WORK/dist" \
     "${art[@]+"${art[@]}"}" --ffx "$WORK/ffx" --linux-toolchain "$WORK/linux-toolchain"
 # make_appimage.py names it after the tree's VERSION, which a tag may leave behind (v0.12.0 carries 0.11.0: the game
-# did not change, only the Windows launcher): the file made, whatever its number
-appimage=$(ls "$WORK"/dist/NX2navi-Linux-*-x86_64.AppImage | head -1)
-file=$(basename "$appimage")
+# did not change, only the Windows launcher). The kit keeps that VERSION (the game it builds is that one); the file
+# takes the release's number, so that its name matches the release it is attached to.
+made=$(ls "$WORK"/dist/NX2navi-Linux-*-x86_64.AppImage | head -1)
+file="NX2navi-Linux-$version-x86_64.AppImage"
+appimage="$WORK/dist/$file"
+[ "$made" = "$appimage" ] || mv "$made" "$appimage"
 "$appimage" --help | head -3   # the AppImage starts
 (cd "$WORK/dist" && sha256sum "$(basename "$appimage")" > SHA256SUMS && cat SHA256SUMS)
 
@@ -178,6 +181,11 @@ Everything the build writes comes from your game: keep it to yourself. NX2navi i
 EOF
 )
 if gh release view "$release" -R "$FORK" >/dev/null 2>&1; then
+    # an AppImage of another name left by an earlier build (0.12.0 first went out as NX2navi-Linux-0.11.0-...)
+    for stale in $(gh release view "$release" -R "$FORK" --json assets --jq '.assets[].name' |
+                   grep -E '^NX2navi-Linux-.*-x86_64\.AppImage$' | grep -vxF "$file"); do
+        gh release delete-asset "$release" "$stale" -R "$FORK" -y
+    done
     gh release upload "$release" -R "$FORK" --clobber "$appimage" "$WORK/dist/SHA256SUMS"
     gh release edit "$release" -R "$FORK" --notes "$notes"
 else
