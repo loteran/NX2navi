@@ -1,3 +1,8 @@
+<p align="center"><a href="https://ko-fi.com/W7W31VXIVC"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="ko-fi"></a></p>
+
+> [!IMPORTANT]
+> **The Linux AppImage now continues on Triforce.** NX2navi has been merged into Triforce, so this fork's Linux work (AppImage, FSR 3.1 and its frame generation, FSR 4 on Linux, bundled toolchain) moves to **[github.com/loteran/Triforce](https://github.com/loteran/Triforce)** (fork of [git.triforceproject.com/triforce/source](https://git.triforceproject.com/triforce/source)). The last release here is [linux-appimage-0.12.0](https://github.com/loteran/NX2navi/releases/tag/linux-appimage-0.12.0).
+
 <p align="center"><img src="docs/images/navi.png" alt="NX2navi" width="160"></p>
 
 # NX2navi
