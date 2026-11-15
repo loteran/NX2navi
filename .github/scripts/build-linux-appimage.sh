@@ -128,7 +128,10 @@ sudo apt-get install -y -qq glslc spirv-tools glslang-tools meson nasm ninja-bui
 NX2NAVI_LINUX_TOOLCHAIN="$WORK/linux-toolchain" tools/ffx_linux/build.sh "$WORK/ffx" "$WORK/dl"
 .venv/bin/python tools/make_appimage.py --python "$python314" --appimagetool "$WORK/appimagetool" --out "$WORK/dist" \
     "${art[@]+"${art[@]}"}" --ffx "$WORK/ffx" --linux-toolchain "$WORK/linux-toolchain"
-appimage="$WORK/dist/NX2navi-Linux-$version-x86_64.AppImage"
+# make_appimage.py names it after the tree's VERSION, which a tag may leave behind (v0.12.0 carries 0.11.0: the game
+# did not change, only the Windows launcher): the file made, whatever its number
+appimage=$(ls "$WORK"/dist/NX2navi-Linux-*-x86_64.AppImage | head -1)
+file=$(basename "$appimage")
 "$appimage" --help | head -3   # the AppImage starts
 (cd "$WORK/dist" && sha256sum "$(basename "$appimage")" > SHA256SUMS && cat SHA256SUMS)
 
@@ -161,17 +164,17 @@ What this AppImage adds to upstream's own (\`NX2navi-Linux-$version-x86_64.AppIm
 
 1. Make the AppImage executable and start it (double-click, or from a terminal):
    \`\`\`sh
-   chmod +x NX2navi-Linux-$version-x86_64.AppImage
-   ./NX2navi-Linux-$version-x86_64.AppImage
+   chmod +x $file
+   ./$file
    \`\`\`
-   A window asks for your \`.nup\` dump and the game folder, builds the game (10 to 25 minutes, once) and plays it; later versions update it. From a terminal: \`./NX2navi-Linux-$version-x86_64.AppImage "/path/to/your game.nup" [game folder]\` (default \`~/Games/Ocarina\`). If it stops, run it again: finished steps are skipped.
+   A window asks for your \`.nup\` dump and the game folder, builds the game (10 to 25 minutes, once) and plays it; later versions update it. From a terminal: \`./$file "/path/to/your game.nup" [game folder]\` (default \`~/Games/Ocarina\`). If it stops, run it again: finished steps are skipped.
 2. Play: from the window, or \`~/Games/Ocarina/play.sh\`. **F1** opens the settings.
 
 The first run installs \`zbic\` (GPL-2.0) with pip, so it needs the internet once. Requirements: x86-64 Linux 6.7+, 16 GB of RAM, about 30 GB free, a Vulkan 1.3 GPU with \`VK_EXT_external_memory_host\` and \`VK_EXT_mesh_shader\`.
 
 Everything the build writes comes from your game: keep it to yourself. NX2navi is an independent, non-commercial fan project, not affiliated with or endorsed by Nintendo.
 
-\`SHA256SUMS\`: \`$sum  NX2navi-Linux-$version-x86_64.AppImage\`
+\`SHA256SUMS\`: \`$sum  $file\`
 EOF
 )
 if gh release view "$release" -R "$FORK" >/dev/null 2>&1; then
