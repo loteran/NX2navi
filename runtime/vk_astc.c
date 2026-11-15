@@ -315,7 +315,14 @@ static int create_pipeline(VkCtx *c) {
 // count against RAM plus page file: on a 32 GiB card with 31 GiB of RAM a long session in the world held 17 GiB of
 // texture memory, 29.8 GiB of VRAM and 45.7 GiB of commit, and a second process beside it ran the system's commit out.
 // So RGBA8 needs 48 GiB of RAM as well.
+// The 20 GiB hold for the game's own resolution (1440p) without frame generation. Frame generation keeps its own
+// images and history beside the game's (232 MiB for FSR 3.1 at 3840x2160, more for DLSS Frame Generation at 3x and 4x),
+// and a game resolution above 1440p makes every render target, the upscaler's history and the HUD-less picture larger:
+// a 24 GiB card at 5120x2160 with DLSS Frame Generation at 3x went from 23.3 GiB of budget to 25 GiB in use after two
+// area changes with RGBA8 textures and fell to a few frames a second. So with either the card needs 28 GiB for RGBA8,
+// which 32 GiB cards have and 24 GiB ones do not (bc_vram_needed).
 #define BC_KEEP_RGBA8_VRAM (20ull << 30)
+#define BC_KEEP_RGBA8_VRAM_LARGE (28ull << 30)
 #define BC_KEEP_RGBA8_RAM_MB (48.0f * 1024 - 1024)   // a 48 GiB PC reports a little under 48 GiB
 
 // The encoder's pipeline: BC3 blocks, or with bc1 BC1 blocks (bc3_encode.comp's specialization constant BC1).
@@ -339,6 +346,20 @@ static VkResult bc_pipeline(VkCtx *c, int bc1, VkPipeline *out) {
     return r;
 }
 
+// The device-local heap RGBA8 textures need with the settings the run starts with (see BC_KEEP_RGBA8_VRAM); why says
+// what raised it, for the log. NX2NAVI_GAME_RES=window is taken as the default 1440p: the window's size is not known yet.
+static VkDeviceSize bc_vram_needed(const char **why) {
+    const char *fg = cfg_value("NX2NAVI_FRAMEGEN");
+    const int fg_on = fg && *fg && strcmp(fg, "off") != 0 && strcmp(fg, "0") != 0;
+    const char *res = cfg_value("NX2NAVI_GAME_RES");
+    const int large = res && *res >= '0' && *res <= '9' && atoi(res) > 1440;
+    *why = fg_on && large ? ", frame generation and a game resolution above 1440p"
+           : fg_on        ? ", frame generation"
+           : large        ? ", a game resolution above 1440p"
+                          : "";
+    return fg_on || large ? BC_KEEP_RGBA8_VRAM_LARGE : BC_KEEP_RGBA8_VRAM;
+}
+
 static int create_bc_pipeline(VkCtx *c) {
     const char *e = cfg_get("NX2NAVI_ASTC_BC");
     VkDeviceSize vram = 0;
@@ -347,10 +368,12 @@ static int create_bc_pipeline(VkCtx *c) {
             vram = c->mem_props.memoryHeaps[h].size;
     float ram_used, ram_mb, proc;
     plat_mem_info(&ram_used, &ram_mb, &proc);
-    int on = e && *e ? *e != '0' : vram < BC_KEEP_RGBA8_VRAM || (ram_mb > 0 && ram_mb < BC_KEEP_RGBA8_RAM_MB);
+    const char *why = "";
+    const VkDeviceSize rgba8_vram = bc_vram_needed(&why);
+    int on = e && *e ? *e != '0' : vram < rgba8_vram || (ram_mb > 0 && ram_mb < BC_KEEP_RGBA8_RAM_MB);
     if (!(e && *e))
-        rt_log("vk: NX2NAVI_ASTC_BC unset: BC3 %s (largest device-local heap %llu MiB, RAM %.0f MiB)", on ? "on" : "off",
-               (unsigned long long)(vram >> 20), ram_mb);
+        rt_log("vk: NX2NAVI_ASTC_BC unset: BC3 %s (largest device-local heap %llu MiB, RGBA8 needs %llu MiB%s; RAM %.0f "
+               "MiB)", on ? "on" : "off", (unsigned long long)(vram >> 20), (unsigned long long)(rgba8_vram >> 20), why, ram_mb);
     if (!on) return 0;
     VkFormatProperties p;
     vkGetPhysicalDeviceFormatProperties(c->phys, VK_FORMAT_BC3_SRGB_BLOCK, &p);
