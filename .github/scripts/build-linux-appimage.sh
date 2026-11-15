@@ -17,8 +17,9 @@ FORK="${GITHUB_REPOSITORY:-loteran/NX2navi}"
 # appimage-linux: AMD FSR 3.1 upscaling and frame generation on Linux (tools/ffx_linux) and the toolchain the AppImage
 # carries (tools/make_linux_toolchain.py), so nothing has to be installed. A commit the tag already has is skipped.
 # fsr4-linux (on top of appimage-linux): AMD FSR 4 upscaling on Linux, the library made on the player's PC from AMD's
-# SDK DLL (tools/fsr4_linux.py, the window's "AMD FSR 4" button)
-BRANCHES=(appimage-linux fsr4-linux)
+# SDK DLL (tools/fsr4_linux.py, the window's "AMD FSR 4" button). gpu-aware-bc3 (on the tag alone): ASTC textures
+# stay BC3 on 24 GiB cards with frame generation or a game resolution above 1440p (upstream issue #942).
+BRANCHES=(appimage-linux fsr4-linux gpu-aware-bc3)
 WORK="${RUNNER_TEMP:-/tmp}/nx2navi-appimage"
 
 want="${1:-latest}"
